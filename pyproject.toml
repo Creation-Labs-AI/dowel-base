@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "dowel"
+version = "0.1.0"
+description = ""
+authors = ["Jaime Sabal <jsabalb@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fsspec = "2023.4.0"
+s3fs = "2023.4.0"
+tabulate = "^0.9.0"
+python-dateutil = "^2.8.2"
+numpy = "^1.21.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

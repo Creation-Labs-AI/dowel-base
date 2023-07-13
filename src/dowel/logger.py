@@ -136,10 +136,14 @@ import contextlib
 import warnings
 
 from dowel.utils import colorize
+from dowel import get_filesystem
 
 
 class LogOutput(abc.ABC):
     """Abstract class for Logger Outputs."""
+
+    def __init__(self):
+        self._fs = get_filesystem() # initialize filesystem
 
     @property
     def types_accepted(self):

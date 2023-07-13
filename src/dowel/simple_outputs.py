@@ -6,7 +6,6 @@ import abc
 import datetime
 import os
 import sys
-
 import dateutil.tz
 
 from dowel import LogOutput
@@ -57,9 +56,11 @@ class FileOutput(LogOutput, metaclass=abc.ABCMeta):
     """
 
     def __init__(self, file_name, mode='w'):
-        mkdir_p(os.path.dirname(file_name))
+        if self._fs.protocol == "file":
+            mkdir_p(os.path.dirname(file_name))
+
         # Open the log file in child class
-        self._log_file = open(file_name, mode)
+        self._log_file = self._fs.open(file_name, mode)
 
     def close(self):
         """Close any files used by the output."""

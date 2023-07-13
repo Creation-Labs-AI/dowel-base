@@ -1,7 +1,6 @@
 """Utilities for console outputs."""
 import errno
 import os
-
 color2num = dict(gray=30,
                  red=31,
                  green=32,

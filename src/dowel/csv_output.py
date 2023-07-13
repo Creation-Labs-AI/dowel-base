@@ -48,7 +48,7 @@ class CsvOutput(FileOutput):
                 self._fieldnames = (set(self._fieldnames) | set(to_csv.keys()))
 
                 # Open a new copy of the log file
-                self._log_file = open(self._filename, 'w')
+                self._log_file = self._fs.open(self._filename, 'w')
                 self._writer = csv.DictWriter(self._log_file,
                                               fieldnames=self._fieldnames,
                                               restval='',
