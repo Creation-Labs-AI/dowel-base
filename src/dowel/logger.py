@@ -131,12 +131,13 @@ foo  bar
 # Feel free to add your own inputs and outputs to the logger!
 
 """
+from typing import List
 import abc
 import contextlib
 import warnings
 
 from dowel.utils import colorize
-from dowel import get_filesystem
+from dowel.filesystem import get_filesystem
 
 
 class LogOutput(abc.ABC):
@@ -144,6 +145,9 @@ class LogOutput(abc.ABC):
 
     def __init__(self):
         self._fs = get_filesystem() # initialize filesystem
+        self.protocol = self._fs.protocol if isinstance(self._fs.protocol, str) else self._fs.protocol[0]
+        
+        assert self.protocol in ['file', 's3'], "Only file and s3 protocols are supported"
 
     @property
     def types_accepted(self):
@@ -184,7 +188,7 @@ class Logger:
     """This is the class that handles logging."""
 
     def __init__(self):
-        self._outputs = []
+        self._outputs: List[LogOutput] = []
         self._prefixes = []
         self._prefix_str = ''
         self._warned_once = set()
@@ -204,7 +208,7 @@ class Logger:
         """
         if not self._outputs:
             self._warn('No outputs have been added to the logger.')
-
+        
         at_least_one_logged = False
         for output in self._outputs:
             if isinstance(data, output.types_accepted):
@@ -229,6 +233,7 @@ class Logger:
             raise ValueError(msg)
         elif not isinstance(output, LogOutput):
             raise ValueError('Output object must be a subclass of LogOutput')
+
         self._outputs.append(output)
 
     def remove_all(self):

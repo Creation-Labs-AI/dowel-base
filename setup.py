@@ -46,12 +46,12 @@ with open('VERSION') as v:
     version = v.read().strip()
 
 setup(
-    name='dowel',
+    name='hm-dowel',
     version=version,
     author='Reinforcement Learning Working Group',
     author_email='dowel@noreply.github.com',
     description='A logger for machine learning research',
-    url='https://github.com/rlworkgroup/dowel',
+    url='https://github.com/Creation-Labs-AI/dowel',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     python_requires='>=3.5',

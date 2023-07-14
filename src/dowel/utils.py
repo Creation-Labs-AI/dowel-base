@@ -23,15 +23,19 @@ def colorize(string, color, bold=False, highlight=False):
         attr.append('1')
     return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), string)
 
-
-def mkdir_p(path):
-    """Create a directory with path."""
-    if not path:
-        return
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+def get_relative_path(path: str):
+    """Get the relative path of a file path given the current working directory.
+    The path is given in the form '{protocol}://{absolute_prefix}/{path}'. The
+    protocol can be 'file', 's3', etc.
+    Args:
+        path: The absolute path of the file.
+        
+    Returns:
+        The relative path of the file.
+    """
+    if path.startswith("file://"):
+        path = path[len("file://"):]
+        return os.path.relpath(path, os.getcwd())
+    else:
+        path = path[len("s3://"):]
+        return '/'.join(path.split('/')[1:])
