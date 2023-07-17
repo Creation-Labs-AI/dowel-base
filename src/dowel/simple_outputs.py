@@ -60,10 +60,8 @@ class FileOutput(LogOutput, metaclass=abc.ABCMeta):
             dir_path = os.path.dirname(file_name)
             self._fs.makedirs(dir_path, exist_ok=True)
 
-        # Open the log file in child class
-        self.mode = mode if self.protocol == "file" else "w"
+        self.mode = mode
         self.file_name = file_name
-
 
 class TextOutput(FileOutput):
     """Text file output for logger.
@@ -81,27 +79,6 @@ class TextOutput(FileOutput):
     def types_accepted(self):
         """Accept str objects only."""
         return (str, TabularInput)
-    
-    def _write_local(self, data: str) -> None: 
-        with self._fs.open(self.file_name, self.mode) as fo: 
-            fo.write(data + '\n')
-    
-    def _write_remote(self, data: str) -> None:
-        # for S3 we need to read the file, append the new line and write it back
-            if self._fs.exists(self.file_name):
-                with self._fs.open(self.file_name, "r") as fi:
-                    curr = fi.read()
-            else:
-                curr = ''
-                
-            with self._fs.open(self.file_name, self.mode) as fo:
-                fo.write(curr + data + '\n')
-    
-    def write(self, data: str): 
-        if self.protocol == "file":
-            self._write_local(data)
-        else:
-            self._write_remote(data)
 
     def record(self, data, prefix=''):
         """Log data to text file."""
@@ -117,5 +94,6 @@ class TextOutput(FileOutput):
         else:
             raise ValueError('Unacceptable type.')
         
-        self.write(out)
+        with self._fs.open(self.file_name, self.mode) as fo: 
+            fo.write(out + '\n')
 
