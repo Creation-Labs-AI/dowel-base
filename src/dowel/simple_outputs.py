@@ -6,13 +6,10 @@ import abc
 import datetime
 import os
 import sys
-
 import dateutil.tz
 
 from dowel import LogOutput
 from dowel.tabular_input import TabularInput
-from dowel.utils import mkdir_p
-
 
 class StdOutput(LogOutput):
     """Standard console output for the logger.
@@ -21,6 +18,7 @@ class StdOutput(LogOutput):
     """
 
     def __init__(self, with_timestamp=True):
+        super().__init__()
         self._with_timestamp = with_timestamp
 
     @property
@@ -57,19 +55,13 @@ class FileOutput(LogOutput, metaclass=abc.ABCMeta):
     """
 
     def __init__(self, file_name, mode='w'):
-        mkdir_p(os.path.dirname(file_name))
-        # Open the log file in child class
-        self._log_file = open(file_name, mode)
+        super().__init__()
+        if self._fs.protocol == "file":
+            dir_path = os.path.dirname(file_name)
+            self._fs.makedirs(dir_path, exist_ok=True)
 
-    def close(self):
-        """Close any files used by the output."""
-        if self._log_file and not self._log_file.closed:
-            self._log_file.close()
-
-    def dump(self, step=None):
-        """Flush data to log file."""
-        self._log_file.flush()
-
+        self.mode = mode
+        self.file_name = file_name
 
 class TextOutput(FileOutput):
     """Text file output for logger.
@@ -101,5 +93,7 @@ class TextOutput(FileOutput):
             data.mark_str()
         else:
             raise ValueError('Unacceptable type.')
+        
+        with self._fs.open(self.file_name, self.mode) as fo: 
+            fo.write(out + '\n')
 
-        self._log_file.write(out + '\n')

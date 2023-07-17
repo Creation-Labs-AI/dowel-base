@@ -1,68 +1,55 @@
 """A `dowel.logger.LogOutput` for CSV files."""
-import csv
-import os
+import pandas as pd
 
 from dowel import TabularInput
 from dowel.simple_outputs import FileOutput
 
-
 class CsvOutput(FileOutput):
     """CSV file output for logger.
+
+    # TODO: Add buffering at some point to reduce S3 traffic
 
     :param file_name: The file this output should log to.
     """
 
     def __init__(self, file_name):
         super().__init__(file_name)
-        self._writer = None
-        self._fieldnames = None
-        self._filename = file_name
 
     @property
     def types_accepted(self):
         """Accept TabularInput objects only."""
         return (TabularInput, )
+    
+    def _save_as_csv(self, data: pd.DataFrame) -> None:
+        with self._fs.open(self.file_name, self.mode) as fo:
+            data.to_csv(fo, index=False)
 
     def record(self, data, prefix=''):
         """Log tabular data to CSV."""
-        if isinstance(data, TabularInput):
-            to_csv = data.as_primitive_dict
-
-            if not self._writer:
-                self._fieldnames = set(to_csv.keys())
-                self._writer = csv.DictWriter(self._log_file,
-                                              fieldnames=self._fieldnames,
-                                              restval='',
-                                              extrasaction='raise')
-                self._writer.writeheader()
-
-            if to_csv.keys() != self._fieldnames:
-                # Close existing log file
-                super().close()
-
-                # Move log file to temp file
-                temp_file_name = '{}.tmp'.format(self._filename)
-                os.replace(self._filename, temp_file_name)
-
-                # Add new keys to fieldnames
-                self._fieldnames = (set(self._fieldnames) | set(to_csv.keys()))
-
-                # Open a new copy of the log file
-                self._log_file = open(self._filename, 'w')
-                self._writer = csv.DictWriter(self._log_file,
-                                              fieldnames=self._fieldnames,
-                                              restval='',
-                                              extrasaction='raise')
-
-                # Transfer data from temp file
-                with open(temp_file_name, 'r') as temp_file:
-                    self._writer.writeheader()
-                    for row in csv.DictReader(temp_file):
-                        self._writer.writerow(row)
-
-            self._writer.writerow(to_csv)
-
-            for k in to_csv.keys():
-                data.mark(k)
-        else:
+        if not isinstance(data, TabularInput):
             raise ValueError('Unacceptable type.')
+        
+        to_csv = {k: [v] for k, v in data.as_primitive_dict.items()}
+        new_df = pd.DataFrame.from_dict(to_csv)
+
+        # if file does not exist, create it and save passed data
+        if not self._fs.exists(self.file_name):
+            self._save_as_csv(new_df)
+            return 
+        
+        # if file exists, read it and check if all columns are present
+        with self._fs.open(self.file_name, 'r') as fi:
+            curr_df = pd.read_csv(fi)
+        
+        if to_csv.keys() != set(curr_df.columns):
+            # add new columns to dataframe
+            for key in to_csv.keys():
+                if key not in curr_df.columns:
+                    curr_df[key] = None
+
+        # add new row to dataframe and save to csv
+        df = pd.concat([curr_df, new_df], ignore_index=True)
+        self._save_as_csv(df)
+
+        for k in to_csv.keys():
+            data.mark(k)

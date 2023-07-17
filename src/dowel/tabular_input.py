@@ -151,5 +151,4 @@ class TabularInput:
 
 class TabularInputWarning(UserWarning):
     """Warning class for the TabularInput."""
-
     pass
