@@ -7,6 +7,8 @@ from dowel.simple_outputs import FileOutput
 class CsvOutput(FileOutput):
     """CSV file output for logger.
 
+    # TODO: Add buffering at some point to reduce S3 traffic
+
     :param file_name: The file this output should log to.
     """
 
