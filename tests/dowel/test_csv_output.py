@@ -1,6 +1,7 @@
 import csv
 import os
 import tempfile
+from typing import Union
 
 import pytest
 
@@ -12,7 +13,7 @@ class TestCsvOutput:
     def setup_method(self):
         self.log_file = tempfile.NamedTemporaryFile()
         self.csv_output = CsvOutput(self.log_file.name)
-        self.tabular = TabularInput()
+        self.tabular = TabularInput[Union[int, float]]()
         self.tabular.clear()
 
     def teardown_method(self):

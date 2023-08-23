@@ -23,7 +23,7 @@ class TestTextOutput:
     def setup_method(self):
         self.log_file = tempfile.NamedTemporaryFile()
         self.text_output = TextOutput(self.log_file.name)
-        self.tabular = TabularInput()
+        self.tabular = TabularInput[int]()
 
     def teardown_method(self):
         self.log_file.close()
@@ -90,7 +90,7 @@ class TestTextOutput:
 class TestStdOutput:
 
     def setup_method(self):
-        self.tabular = TabularInput()
+        self.tabular = TabularInput[int]()
         self.std_output = StdOutput(with_timestamp=False)
         self.str_out = io.StringIO()
 

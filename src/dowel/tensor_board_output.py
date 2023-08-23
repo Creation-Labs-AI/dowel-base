@@ -11,24 +11,32 @@ Note:
 """
 import functools
 import warnings
+from numbers import Number
+from typing import Callable, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats
 import tensorboardX as tbX
-try:
-    import tensorflow as tf
-except ImportError:
-    tf = None
 
-from dowel import Histogram
-from dowel import LoggerWarning
-from dowel import LogOutput
-from dowel import TabularInput
+from dowel.histogram import Histogram
+from dowel.logger_warning import LoggerWarning
+from dowel.log_output import LogOutput
+from dowel.tabular_input import TabularInput
 from dowel.utils import colorize
 
+try:
+    import tensorflow as tf
+    RecordType = Union[tf.Graph, TabularInput]
+    GraphType = tf.Graph
+except ImportError:
+    tf = None
+    RecordType = TabularInput
+    GraphType = None
 
-class TensorBoardOutput(LogOutput):
+ValueType = Union[Number, np.integer, np.floating, plt.Figure, scipy.stats.distributions.rv_frozen, scipy.stats._multivariate.multi_rv_frozen, Histogram]
+
+class TensorBoardOutput(LogOutput[RecordType]):
     """TensorBoard output for logger.
 
     Args:
@@ -45,11 +53,11 @@ class TensorBoardOutput(LogOutput):
     """
 
     def __init__(self,
-                 log_dir,
-                 x_axis=None,
-                 additional_x_axes=None,
-                 flush_secs=120,
-                 histogram_samples=1e3):
+                 log_dir: str,
+                 x_axis: Optional[str] = None,
+                 additional_x_axes: Optional[List[str]] = None,
+                 flush_secs: int = 120,
+                 histogram_samples: int = 1e3):
         if x_axis is None:
             assert not additional_x_axes, (
                 'You have to specify an x_axis if you want additional axes.')
@@ -62,7 +70,7 @@ class TensorBoardOutput(LogOutput):
         self._default_step = 0
         self._histogram_samples = int(histogram_samples)
         self._added_graph = False
-        self._waiting_for_dump = []
+        self._waiting_for_dump: List[Callable[[int], None]] = []
         # Used in tests to emulate Tensorflow not being installed.
         self._tf = tf
 
@@ -72,12 +80,13 @@ class TensorBoardOutput(LogOutput):
     @property
     def types_accepted(self):
         """Return the types that the logger may pass to this output."""
+        always_accepted = (TabularInput,)
         if self._tf is None:
-            return (TabularInput, )
+            return always_accepted
         else:
-            return (TabularInput, self._tf.Graph)
+            return always_accepted + (self._tf.Graph,)
 
-    def record(self, data, prefix=''):
+    def record(self, data: RecordType, prefix: str = ""):
         """Add data to tensorboard summary.
 
         Args:
@@ -93,7 +102,7 @@ class TensorBoardOutput(LogOutput):
         else:
             raise ValueError('Unacceptable type.')
 
-    def _record_tabular(self, data, step):
+    def _record_tabular(self, data: TabularInput, step: int):
         if self._x_axis:
             nonexist_axes = []
             for axis in [self._x_axis] + self._additional_x_axes:
@@ -107,24 +116,24 @@ class TensorBoardOutput(LogOutput):
         for key, value in data.as_dict.items():
             if isinstance(value,
                           np.ScalarType) and self._x_axis in data.as_dict:
-                if self._x_axis is not key:
+                if self._x_axis != key:
                     x = data.as_dict[self._x_axis]
                     self._record_kv(key, value, x)
 
                 for axis in self._additional_x_axes:
-                    if key is not axis and key in data.as_dict:
+                    if key != axis and key in data.as_dict:
                         x = data.as_dict[axis]
                         self._record_kv('{}/{}'.format(key, axis), value, x)
             else:
                 self._record_kv(key, value, step)
             data.mark(key)
 
-    def _record_kv(self, key, value, step):
+    def _record_kv(self, key: str, value: ValueType, step):
         if isinstance(value, np.ScalarType):
             self._writer.add_scalar(key, value, step)
         elif isinstance(value, plt.Figure):
             self._writer.add_figure(key, value, step)
-        elif isinstance(value, scipy.stats._distn_infrastructure.rv_frozen):
+        elif isinstance(value, scipy.stats.distributions.rv_frozen):
             shape = (self._histogram_samples, ) + value.mean().shape
             self._writer.add_histogram(key, value.rvs(shape), step)
         elif isinstance(value, scipy.stats._multivariate.multi_rv_frozen):
@@ -132,14 +141,15 @@ class TensorBoardOutput(LogOutput):
                                        step)
         elif isinstance(value, Histogram):
             self._writer.add_histogram(key, value, step)
+            self._writer.add_video()
 
-    def _record_graph(self, graph):
+    def _record_graph(self, graph: GraphType):
         graph_def = graph.as_graph_def(add_shapes=True)
         event = tbX.proto.event_pb2.Event(
             graph_def=graph_def.SerializeToString())
         self._writer.file_writer.add_event(event)
 
-    def dump(self, step=None):
+    def dump(self, step: Optional[int] = None):
         """Flush summary writer to disk."""
         # Log the tabular inputs, now that we have a step
         for p in self._waiting_for_dump:

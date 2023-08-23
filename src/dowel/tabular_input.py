@@ -1,25 +1,28 @@
 """A `dowel.logger` input for tabular (key-value) data."""
 import contextlib
 import warnings
+from numbers import Number
+from typing import Dict, Generic, List, Literal, Sequence, Set, TypeVar
 
 import numpy as np
 import tabulate
 
 from dowel.utils import colorize
 
+ValueType = TypeVar("ValueType")
 
-class TabularInput:
+class TabularInput(Generic[ValueType]):
     """This class allows the user to create tables for easy display.
 
     TabularInput may be passed to the logger via its log() method.
     """
 
     def __init__(self):
-        self._dict = {}
-        self._recorded = set()
-        self._prefixes = []
+        self._dict: Dict[str, ValueType] = {}
+        self._recorded: Set[str] = set()
+        self._prefixes: List[str] = []
         self._prefix_str = ''
-        self._warned_once = set()
+        self._warned_once: Set[str] = set()
         self._disable_warnings = False
 
     def __str__(self):
@@ -27,7 +30,7 @@ class TabularInput:
         return tabulate.tabulate(
             sorted(self.as_primitive_dict.items(), key=lambda x: x[0]))
 
-    def record(self, key, val):
+    def record(self, key: str, val: ValueType):
         """Save key/value entries for the table.
 
         :param key: String key corresponding to the value.
@@ -35,7 +38,7 @@ class TabularInput:
         """
         self._dict[self._prefix_str + str(key)] = val
 
-    def mark(self, key):
+    def mark(self, key: str):
         """Mark key as recorded."""
         self._recorded.add(key)
 
@@ -47,7 +50,7 @@ class TabularInput:
         """Mark all keys."""
         self._recorded |= self._dict.keys()
 
-    def record_misc_stat(self, key, values, placement='back'):
+    def record_misc_stat(self, key: str, values: Sequence[Number], placement: Literal["front", "back"] = "back"):
         """Record statistics of an array.
 
         :param key: String key corresponding to the values.
@@ -60,6 +63,7 @@ class TabularInput:
         else:
             front = key
             back = ''
+
         if values:
             self.record(front + 'Average' + back, np.average(values))
             self.record(front + 'Std' + back, np.std(values))
@@ -74,7 +78,7 @@ class TabularInput:
             self.record(front + 'Max' + back, np.nan)
 
     @contextlib.contextmanager
-    def prefix(self, prefix):
+    def prefix(self, prefix: str):
         """Handle pushing and popping of a tabular prefix.
 
         Can be used in the following way:
@@ -105,7 +109,7 @@ class TabularInput:
         self._dict.clear()
         self._recorded.clear()
 
-    def push_prefix(self, prefix):
+    def push_prefix(self, prefix: str):
         """Push prefix to be appended before printed table.
 
         :param prefix: The string prefix to be prepended to logs.
@@ -131,7 +135,7 @@ class TabularInput:
         """Return a dictionary of the tabular items."""
         return self._dict
 
-    def _warn(self, msg):
+    def _warn(self, msg: str):
         """Warns the user using warnings.warn.
 
         The stacklevel parameter needs to be 3 to ensure the call to logger.log
