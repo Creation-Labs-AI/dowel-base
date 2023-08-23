@@ -1,0 +1,7 @@
+--constraint=constraints.txt
+--no-binary=av
+av
+fsspec[s3]
+matplotlib
+numpy
+tensorboardx

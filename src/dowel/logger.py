@@ -145,8 +145,9 @@ from dowel.simple_outputs import FileOutput, StdOutput, TextOutput
 from dowel.tabular_input import TabularInput
 from dowel.tensor_board_output import TensorBoardOutput
 from dowel.utils import colorize
+from dowel.video_output import VideoOutput
 
-LogOutputType = Union[CsvOutput, FileOutput[Union[str, TabularInput]], StdOutput, TensorBoardOutput, TextOutput]
+LogOutputType = Union[CsvOutput, FileOutput[Union[str, TabularInput]], StdOutput, TensorBoardOutput, TextOutput, VideoOutput]
 
 class Logger:
     """This is the class that handles logging."""

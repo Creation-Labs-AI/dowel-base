@@ -54,7 +54,7 @@ setup(
     url='https://github.com/Creation-Labs-AI/dowel',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=required,
     extras_require=extras,
     license='MIT',
