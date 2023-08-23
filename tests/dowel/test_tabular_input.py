@@ -1,4 +1,5 @@
 import math
+from typing import Dict, List, Union
 
 import pytest
 
@@ -9,7 +10,7 @@ from dowel.tabular_input import TabularInputWarning
 class TestTabularInput:
 
     def setup_method(self):
-        self.tabular = TabularInput()
+        self.tabular = TabularInput[Union[bool, int, float, str, Dict[str, str], List[int]]]()
 
     def test_str(self):
         foo = 123

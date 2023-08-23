@@ -131,70 +131,34 @@ foo  bar
 # Feel free to add your own inputs and outputs to the logger!
 
 """
-from typing import List
-import abc
 import contextlib
 import warnings
+from typing import List, Optional, Set, Type, Union
 
+import numpy as np
+import numpy.typing
+
+from dowel.csv_output import CsvOutput
+from dowel.log_output import LogOutput
+from dowel.logger_warning import LoggerWarning
+from dowel.simple_outputs import FileOutput, StdOutput, TextOutput
+from dowel.tabular_input import TabularInput
+from dowel.tensor_board_output import TensorBoardOutput
 from dowel.utils import colorize
-from dowel.filesystem import get_filesystem
 
-
-class LogOutput(abc.ABC):
-    """Abstract class for Logger Outputs."""
-
-    def __init__(self):
-        self._fs = get_filesystem() # initialize filesystem
-        self.protocol = self._fs.protocol if isinstance(self._fs.protocol, str) else self._fs.protocol[0]
-        
-        assert self.protocol in ['file', 's3'], "Only file and s3 protocols are supported"
-
-    @property
-    def types_accepted(self):
-        """Pass these types to this logger output.
-
-        The types in this tuple will be accepted by this output.
-
-        :return: A tuple containing all valid input types.
-        """
-        return ()
-
-    @abc.abstractmethod
-    def record(self, data, prefix=''):
-        """Pass logger data to this output.
-
-        :param data: The data to be logged by the output.
-        :param prefix: A prefix placed before a log entry in text outputs.
-        """
-        pass
-
-    def dump(self, step=None):
-        """Dump the contents of this output.
-
-        :param step: The current run step.
-        """
-        pass
-
-    def close(self):
-        """Close any files used by the output."""
-        pass
-
-    def __del__(self):
-        """Clean up object upon deletion."""
-        self.close()
-
+LogOutputType = Union[CsvOutput, FileOutput[Union[str, TabularInput]], StdOutput, TensorBoardOutput, TextOutput]
 
 class Logger:
     """This is the class that handles logging."""
 
     def __init__(self):
-        self._outputs: List[LogOutput] = []
-        self._prefixes = []
+        self._outputs: List[LogOutputType] = []
+        self._prefixes: List[str] = []
         self._prefix_str = ''
-        self._warned_once = set()
+        self._warned_once: Set[str] = set()
         self._disable_warnings = False
 
-    def log(self, data):
+    def log(self, data: Union[str, numpy.typing.NDArray[np.integer], TabularInput]):
         """Magic method that takes in all different types of input.
 
         This method is the main API for the logger. Any data to be logged goes
@@ -208,7 +172,7 @@ class Logger:
         """
         if not self._outputs:
             self._warn('No outputs have been added to the logger.')
-        
+
         at_least_one_logged = False
         for output in self._outputs:
             if isinstance(data, output.types_accepted):
@@ -221,7 +185,7 @@ class Logger:
                     type(data).__name__))
             self._warn(warning)
 
-    def add_output(self, output):
+    def add_output(self, output: LogOutputType):
         """Add a new output to the logger.
 
         All data that is compatible with this output will be sent there.
@@ -240,7 +204,7 @@ class Logger:
         """Remove all outputs that have been added to this logger."""
         self._outputs.clear()
 
-    def remove_output_type(self, output_type):
+    def remove_output_type(self, output_type: Type[LogOutputType]):
         """Remove all outputs of a given type.
 
         :param output_type: A LogOutput subclass type to be removed.
@@ -250,7 +214,7 @@ class Logger:
             if not isinstance(output, output_type)
         ]
 
-    def reset_output(self, output):
+    def reset_output(self, output: LogOutputType):
         """Removes, then re-adds a given output to the logger.
 
         :param output: An instantiation of a LogOutput subclass to be added.
@@ -258,7 +222,7 @@ class Logger:
         self.remove_output_type(type(output))
         self.add_output(output)
 
-    def has_output_type(self, output_type):
+    def has_output_type(self, output_type: Type[LogOutputType]):
         """Check to see if a given logger output is attached to the logger.
 
         :param output_type: A LogOutput subclass type to be checked for.
@@ -266,9 +230,10 @@ class Logger:
         for output in self._outputs:
             if isinstance(output, output_type):
                 return True
+
         return False
 
-    def dump_output_type(self, output_type, step=None):
+    def dump_output_type(self, output_type: Type[LogOutputType], step: Optional[int] = None):
         """Dump all outputs of the given type.
 
         :param output_type: A LogOutput subclass type to be dumped.
@@ -278,7 +243,7 @@ class Logger:
             if isinstance(output, output_type):
                 output.dump(step=step)
 
-    def dump_all(self, step=None):
+    def dump_all(self, step: Optional[int] = None):
         """Dump all outputs connected to the logger.
 
         :param step: The current run step.
@@ -287,7 +252,7 @@ class Logger:
             output.dump(step=step)
 
     @contextlib.contextmanager
-    def prefix(self, prefix):
+    def prefix(self, prefix: str):
         """Add a prefix to the logger.
 
         This allows text output to be prepended with a given stack of prefixes.
@@ -306,7 +271,7 @@ class Logger:
         finally:
             self.pop_prefix()
 
-    def push_prefix(self, prefix):
+    def push_prefix(self, prefix: str):
         """Add prefix to prefix stack.
 
         :param prefix: The prefix string to be logged.
@@ -319,7 +284,7 @@ class Logger:
         del self._prefixes[-1]
         self._prefix_str = ''.join(self._prefixes)
 
-    def _warn(self, msg):
+    def _warn(self, msg: str):
         """Warns the user using warnings.warn.
 
         The stacklevel parameter needs to be 3 to ensure the call to logger.log
@@ -333,7 +298,3 @@ class Logger:
     def disable_warnings(self):
         """Disable logger warnings for testing."""
         self._disable_warnings = True
-
-
-class LoggerWarning(UserWarning):
-    """Warning class for the Logger."""

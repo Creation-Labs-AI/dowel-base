@@ -9,7 +9,7 @@ from dowel.logger import LoggerWarning
 class TestLogger:
 
     def setup_method(self):
-        self.mock_output = mock.Mock(spec=LogOutput, types_accepted=(str, ))
+        self.mock_output = mock.Mock(spec=LogOutput[str], types_accepted=(str, ))
         self.mock_output_type = type(self.mock_output)
         self.logger = Logger()
 

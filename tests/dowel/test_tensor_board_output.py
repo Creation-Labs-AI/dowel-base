@@ -10,7 +10,7 @@ import scipy.stats
 from dowel import Histogram
 from dowel import logger
 from dowel import TabularInput
-from dowel import TensorBoardOutput
+from dowel import TensorBoardOutput, ValueType
 from tests.fixtures import NullOutput
 
 try:
@@ -48,7 +48,7 @@ class TBOutputTest(TfGraphTestCase):
     def setup_method(self):
         super().setup_method()
         self.log_dir = tempfile.TemporaryDirectory()
-        self.tabular = TabularInput()
+        self.tabular = TabularInput[ValueType]()
         self.tabular.clear()
         self.tensor_board_output = TensorBoardOutput(self.log_dir.name)
 
