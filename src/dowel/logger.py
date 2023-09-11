@@ -143,11 +143,16 @@ from dowel.log_output import LogOutput
 from dowel.logger_warning import LoggerWarning
 from dowel.simple_outputs import FileOutput, StdOutput, TextOutput
 from dowel.tabular_input import TabularInput
-from dowel.tensor_board_output import TensorBoardOutput
+from dowel.tensor_board_output import TensorBoardOutput, ValueType
+from dowel.torch_tensorboard_output import TorchTensorBoardOutput, ValueType as TorchValueType
 from dowel.utils import colorize
-from dowel.video_output import VideoOutput
+from dowel.video_output import RolloverToken, VideoOutput, VideoOutputs
 
-LogOutputType = Union[CsvOutput, FileOutput[Union[str, TabularInput]], StdOutput, TensorBoardOutput, TextOutput, VideoOutput]
+LogOutputType = Union[
+    CsvOutput, FileOutput[Union[str, TabularInput]], StdOutput,
+    TensorBoardOutput, TorchTensorBoardOutput, TextOutput,
+    VideoOutput, VideoOutputs
+]
 
 class Logger:
     """This is the class that handles logging."""
@@ -159,7 +164,7 @@ class Logger:
         self._warned_once: Set[str] = set()
         self._disable_warnings = False
 
-    def log(self, data: Union[str, numpy.typing.NDArray[np.integer], TabularInput]):
+    def log(self, data: Union[str, numpy.typing.NDArray[np.integer], RolloverToken, TabularInput[Union[ValueType, TorchValueType]]]):
         """Magic method that takes in all different types of input.
 
         This method is the main API for the logger. Any data to be logged goes

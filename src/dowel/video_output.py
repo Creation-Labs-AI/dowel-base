@@ -1,4 +1,5 @@
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Union
 
 import av
 import av.container
@@ -6,6 +7,7 @@ import av.video
 import numpy as np
 import numpy.typing
 
+from dowel.log_output import LogOutput
 from dowel.simple_outputs import FileOutput
 
 class VideoOutput(FileOutput[numpy.typing.NDArray[np.integer]]):
@@ -66,3 +68,83 @@ class VideoOutput(FileOutput[numpy.typing.NDArray[np.integer]]):
         self.container.close()
 
         super().close()
+
+@dataclass
+class RolloverToken:
+    label: Optional[str] = None
+
+class VideoOutputs(LogOutput[Union[RolloverToken, numpy.typing.NDArray[np.integer]]]):
+    def __init__(
+            self,
+            root_dir: str,
+            extension: Optional[str] = "mp4",
+            format: Optional[str] = None,
+            options: Optional[dict] = None,
+            container_options: Optional[dict] = None,
+            buffer_size: int = 32768,
+            stream_format: str = "hevc_nvenc",
+            pixel_format: Optional[str] = None,
+            frame_rate: int = 20,
+            **stream_options):
+        super().__init__()
+
+        self.root_dir = root_dir
+        self.extension = extension
+        if not self._fs.exists(self.root_dir):
+            self._fs.makedirs(self.root_dir, exist_ok=True)
+
+        self.index = 0
+        self.next_label: Optional[str] = None
+
+        self.extra_args = {
+            "format": format,
+            "options": options,
+            "container_options": container_options,
+            "buffer_size": buffer_size,
+            "stream_format": stream_format,
+            "pixel_format": pixel_format,
+            "frame_rate": frame_rate
+        }
+        self.stream_options = stream_options
+
+        self.video_output: Optional[VideoOutput] = None
+
+    @property
+    def types_accepted(self):
+        return (np.ndarray, RolloverToken)
+
+    @property
+    def next_tag(self):
+        if self.next_label is not None:
+            return self.next_label
+        else:
+            return str(self.index)
+
+    def rollover(self, rollover_token: RolloverToken):
+        self.close()
+
+        if rollover_token.label is not None:
+            self.next_label = rollover_token.label
+
+        self.index += 1
+
+    def open_video(self):
+        self.video_output = VideoOutput(
+            f"{self.root_dir}/{self.next_tag}.{self.extension}",
+            **self.extra_args,
+            **self.stream_options
+        )
+
+    def record(self, data: Union[RolloverToken, numpy.typing.NDArray[np.integer]], prefix: str = ""):
+        if isinstance(data, RolloverToken):
+            self.rollover(data)
+        else:
+            if self.video_output is None:
+                self.open_video()
+
+            self.video_output.record(data, prefix)
+
+    def close(self):
+        if self.video_output is not None:
+            self.video_output.close()
+            self.video_output = None

@@ -25,16 +25,16 @@ from dowel.log_output import LogOutput
 from dowel.tabular_input import TabularInput
 from dowel.utils import colorize
 
+ValueType = Union[Number, np.integer, np.floating, plt.Figure, scipy.stats.distributions.rv_frozen, scipy.stats._multivariate.multi_rv_frozen, Histogram]
+
 try:
     import tensorflow as tf
-    RecordType = Union[tf.Graph, TabularInput]
+    RecordType = Union[tf.Graph, TabularInput[ValueType]]
     GraphType = tf.Graph
 except ImportError:
     tf = None
-    RecordType = TabularInput
+    RecordType = TabularInput[ValueType]
     GraphType = None
-
-ValueType = Union[Number, np.integer, np.floating, plt.Figure, scipy.stats.distributions.rv_frozen, scipy.stats._multivariate.multi_rv_frozen, Histogram]
 
 class TensorBoardOutput(LogOutput[RecordType]):
     """TensorBoard output for logger.
@@ -57,7 +57,7 @@ class TensorBoardOutput(LogOutput[RecordType]):
                  x_axis: Optional[str] = None,
                  additional_x_axes: Optional[List[str]] = None,
                  flush_secs: int = 120,
-                 histogram_samples: int = 1e3):
+                 histogram_samples: int = 1000):
         if x_axis is None:
             assert not additional_x_axes, (
                 'You have to specify an x_axis if you want additional axes.')
@@ -102,7 +102,7 @@ class TensorBoardOutput(LogOutput[RecordType]):
         else:
             raise ValueError('Unacceptable type.')
 
-    def _record_tabular(self, data: TabularInput, step: int):
+    def _record_tabular(self, data: TabularInput[ValueType], step: int):
         if self._x_axis:
             nonexist_axes = []
             for axis in [self._x_axis] + self._additional_x_axes:
@@ -141,7 +141,6 @@ class TensorBoardOutput(LogOutput[RecordType]):
                                        step)
         elif isinstance(value, Histogram):
             self._writer.add_histogram(key, value, step)
-            self._writer.add_video()
 
     def _record_graph(self, graph: GraphType):
         graph_def = graph.as_graph_def(add_shapes=True)

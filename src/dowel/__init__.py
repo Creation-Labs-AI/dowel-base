@@ -10,7 +10,9 @@ from dowel.simple_outputs import StdOutput, TextOutput
 from dowel.tabular_input import TabularInput
 from dowel.csv_output import CsvOutput  # noqa: I100
 from dowel.tensor_board_output import TensorBoardOutput, ValueType
-from dowel.video_output import VideoOutput
+from dowel.torch_tensorboard_output import TorchTensorBoardOutput
+from dowel.torch_tensorboard_output import ValueType as TorchValueType
+from dowel.video_output import RolloverToken, VideoOutput, VideoOutputs
 
 logger = Logger()
 tabular = TabularInput[ValueType]()
@@ -23,10 +25,14 @@ __all__ = [
     'TextOutput',
     'LogOutput',
     'LoggerWarning',
+    'RolloverToken',
     'TabularInput',
     'TensorBoardOutput',
+    'TorchTensorBoardOutput',
+    'TorchValueType',
     'logger',
     'tabular',
     'ValueType',
-    'VideoOutput'
+    'VideoOutput',
+    'VideoOutputs'
 ]
